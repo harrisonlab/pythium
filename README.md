@@ -127,9 +127,9 @@ A range of hash lengths were used and the best assembly selected for subsequent 
     Trim_R=$(ls $StrainPath/R/*.fq.gz | grep 'run2')
     echo $Trim_F
     echo $Trim_R
-  	ProgDir=/home/gomeza/git_repos/emr_repos/tools/seq_tools/assemblers/spades
-  	OutDir=assembly/spades/N.ditissima/R0905_v2
-    qsub $ProgDir/submit_SPAdes.sh $F_Read $R_Read $OutDir correct
+    ProgDir=/home/armita/git_repos/emr_repos/tools/seq_tools/assemblers/spades
+    OutDir=assembly/spades/P.violae/$Strain
+    qsub $ProgDir/submit_SPAdes.sh $F_Read $R_Read $OutDir correct 10
   done
 ```
 <!--
