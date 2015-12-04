@@ -56,7 +56,7 @@ Data quality was visualised using fastqc:
 
 for RawData in $(ls raw_dna/paired/P.*/*/*/*.fastq.gz); do
 echo $RawData;
-ProgDir=~/git_repos/emr_repos/tools/seq_tools/dna_qc;
+ProgDir=/home/halesk/git_repos/tools/seq_tools/dna_qc;
 qsub $ProgDir/run_fastqc.sh $RawData;
 done
 ```
@@ -70,8 +70,8 @@ This was done with fastq-mcf
 ```bash
 for Strain in $(ls raw_dna/paired/P.*/); do
 echo $Strain
-IluminaAdapters=/home/armita/git_repos/emr_repos/tools/seq_tools/ncbi_adapters.fa
-ProgDir=/home/armita/git_repos/emr_repos/tools/seq_tools/rna_qc
+IluminaAdapters=/home/halesk/git_repos/tools/seq_tools/ncbi_adapters.fa
+ProgDir=/home/halesk/git_repos/tools/seq_tools/rna_qc
 Read_F=$(ls raw_dna/paired/P.*/$Strain/F/*.fastq.gz | grep -v 'run2')
 Read_R=$(ls raw_dna/paired/P.*/$Strain/R/*.fastq.gz | grep -v 'run2')
 echo $Read_F
