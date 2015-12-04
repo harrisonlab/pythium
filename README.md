@@ -90,7 +90,7 @@ Data quality was visualised once again following trimming:
 ```bash
 for RawData in $(ls qc_dna/paired/P.*/*/*/*.fq.gz); do
 echo $RawData;
-ProgDir=~/git_repos/emr_repos/tools/seq_tools/dna_qc;
+ProgDir=~/halesk/git_repos/tools/seq_tools/dna_qc;
 qsub $ProgDir/run_fastqc.sh $RawData;
 done
 ```
@@ -105,7 +105,7 @@ for StrainPath in $(ls -d qc_dna/paired/P.*/*); do
 echo $StrainPath
 Trim_F=$(ls $StrainPath/F/*.fq.gz)
 Trim_R=$(ls $StrainPath/R/*.fq.gz)
-ProgDir=~/git_repos/emr_repos/tools/seq_tools/dna_qc
+ProgDir= /home/halesk/git_repos/emr_repos/tools/seq_tools/dna_qc
 qsub $ProgDir/kmc_kmer_counting.sh $Trim_F $Trim_R
 done
 ```
@@ -115,22 +115,28 @@ done
 ** Esimated Coverage is: 42
 
 #Assembly
-Assembly was performed using: Velvet / Abyss / Spades
+Assembly was performed using: Spades
 
-A range of hash lengths were used and the best assembly selected for subsequent analysis
 
+This is what I submitted for assembly
 
 ```bash
-  for StrainPath in $(ls -d qc_dna/paired/P.*/*); do
-    echo $StrainPath
-    Trim_F=$(ls $StrainPath/F/*.fq.gz | grep 'run2')
-    Trim_R=$(ls $StrainPath/R/*.fq.gz | grep 'run2')
-    echo $Trim_F
-    echo $Trim_R
-    ProgDir=/home/armita/git_repos/emr_repos/tools/seq_tools/assemblers/spades
-    OutDir=assembly/spades/P.violae/$Strain
-    qsub $ProgDir/submit_SPAdes.sh $F_Read $R_Read $OutDir correct 10
-  done
+
+for StrainPath in $(ls -d qc_dna/paired/*/*); do 
+ProgDir=~/git_repos/tools/seq_tools/assemblers/spades/multiple_libraries; 
+Strain=$(echo $StrainPath | rev | cut -f1 -d '/' | rev); 
+Organism=$(echo $StrainPath | rev | cut -f2 -d '/' | rev); 
+F1_Read=$(ls $StrainPath/F/*.fq.gz | grep -v 'run2'); 
+R1_Read=$(ls $StrainPath/R/*.fq.gz | grep -v 'run2'); 
+F2_Read=$(ls $StrainPath/F/*.fq.gz | grep 'run2'); 
+R2_Read=$(ls $StrainPath/R/*.fq.gz | grep 'run2'); 
+OutDir=assembly/spades/$Organism/$Strain; 
+echo $F1_Read; 
+echo $R1_Read; 
+echo $F2_Read; 
+echo $R2_Read; 
+qsub $ProgDir/subSpades_2lib.sh $F1_Read $R1_Read $F2_Read $R2_Read $OutDir correct 10
+done
 ```
 <!--
 Quast
