@@ -138,6 +138,51 @@ echo $R2_Read;
 qsub $ProgDir/subSpades_2lib.sh $F1_Read $R1_Read $F2_Read $R2_Read $OutDir correct 10
 done
 ```
+
+Remove contaminants
+
+```bash
+for OutDir in $(ls -d assembly/spades/P.violae/*/filtered_contigs); do
+echo $OutDir
+ProgDir=/home/halesk/git_repos/tools/seq_tools/assemblers/assembly_qc/remove_contaminants
+AssFiltered=$OutDir/contigs_min_500bp.fasta
+AssRenamed=$OutDir/contigs_min_500bp_renamed.fasta
+ls $AssFiltered
+printf '.\t.\t.\t.\n' > editfile.tab
+$ProgDir/remove_contaminants.py --inp $AssFiltered --out $AssRenamed --coord_file editfile.tab
+rm editfile.tab
+done
+
+Quast
+
+```bash
+ProgDir=/home/halesk/git_repos/tools/seq_tools/assemblers/assembly_qc/quast
+for Assembly in $(ls assembly/spades/*/*/filtered_contigs/*_500bp_renamed.fasta); do
+Strain=$(echo $Assembly | rev | cut -d '/' -f3 | rev)
+Organism=$(echo $Assembly | rev | cut -d '/' -f4 | rev)
+OutDir=assembly/spades/$Organism/$Strain/filtered_contigs
+qsub $ProgDir/sub_quast.sh $Assembly $OutDir
+done
+
+These report stats can be found in:
+less assembly/spades/P.violae/DE/filtered_contigs
+
+
+Repeat masking was performed and used the following programs: Repeatmasker Repeatmodeler
+
+The best assembly was used to perform repeatmasking
+
+ProgDir=/home/halesk/git_repos/tools/seq_tools/repeat_masking
+for BestAss in $(ls assembly/spades/*/*/filtered_contigs/*_500bp_renamed.fasta); do
+echo $BestAss
+qsub $ProgDir/rep_modeling.sh $BestAss
+qsub $ProgDir/transposonPSI.sh $BestAss
+done
+
+If only want to run either HL or DE then change second * to HL or DE
+Take around 24 hours
+
+Below: what was on Readme before than Andrew did:
 <!--
 Quast
 
