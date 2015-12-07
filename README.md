@@ -139,11 +139,11 @@ qsub $ProgDir/subSpades_2lib.sh $F1_Read $R1_Read $F2_Read $R2_Read $OutDir corr
 done
 ```
 
-Remove contaminants
+#Remove contaminants
 
 ```bash
-for OutDir in $(ls -d assembly/spades/P.violae/*/filtered_contigs); do
-echo $OutDir
+for OutDir in $(ls -d assembly/spades/P.violae/HL/filtered_contigs); do
+echo "$OutDir"
 ProgDir=/home/halesk/git_repos/tools/seq_tools/assemblers/assembly_qc/remove_contaminants
 AssFiltered=$OutDir/contigs_min_500bp.fasta
 AssRenamed=$OutDir/contigs_min_500bp_renamed.fasta
@@ -152,28 +152,29 @@ printf '.\t.\t.\t.\n' > editfile.tab
 $ProgDir/remove_contaminants.py --inp $AssFiltered --out $AssRenamed --coord_file editfile.tab
 rm editfile.tab
 done
+```
 
-Quast
+#Quast
 
 ```bash
 ProgDir=/home/halesk/git_repos/tools/seq_tools/assemblers/assembly_qc/quast
-for Assembly in $(ls assembly/spades/*/*/filtered_contigs/*_500bp_renamed.fasta); do
+for Assembly in $(ls assembly/spades/*/HL/filtered_contigs/*_500bp_renamed.fasta); do
 Strain=$(echo $Assembly | rev | cut -d '/' -f3 | rev)
 Organism=$(echo $Assembly | rev | cut -d '/' -f4 | rev)
 OutDir=assembly/spades/$Organism/$Strain/filtered_contigs
 qsub $ProgDir/sub_quast.sh $Assembly $OutDir
 done
+```
 
 These report stats can be found in:
 less assembly/spades/P.violae/DE/filtered_contigs
 
-
+#Repeat Masking
 Repeat masking was performed and used the following programs: Repeatmasker Repeatmodeler
 
-The best assembly was used to perform repeatmasking
-
+```bash
 ProgDir=/home/halesk/git_repos/tools/seq_tools/repeat_masking
-for BestAss in $(ls assembly/spades/*/*/filtered_contigs/*_500bp_renamed.fasta); do
+for BestAss in $(ls assembly/spades/*/HL/filtered_contigs/*_500bp_renamed.fasta); do
 echo $BestAss
 qsub $ProgDir/rep_modeling.sh $BestAss
 qsub $ProgDir/transposonPSI.sh $BestAss
@@ -182,7 +183,92 @@ done
 If only want to run either HL or DE then change second * to HL or DE
 Take around 24 hours
 
-Below: what was on Readme before than Andrew did:
+
+#Pre-gene prediction
+Quality of genome assemblies was assessed by looking for the gene space in the assemblies.
+
+```bash
+ProgDir=/home/halesk/git_repos/tools/gene_prediction/cegma
+for Assembly in $(ls assembly/spades/*/HL/filtered_contigs/*_500bp_renamed.fasta); do
+qsub $ProgDir/sub_cegma.sh $Assembly dna
+done
+```
+Results found in Pythium/gene_pred/cegma  - 
+
+###Gene prediction 1  Augustus
+
+Did 2 for AUgustus - 1st with Fusarium - line GeneModel=Fusarium
+then second with P.cactorum
+
+1st line for loop copied from above
+2/3/4 copied from above, cuts out words from file directory to get strain and organism. 
+Then makes out directory
+5 where programme is
+6 using this data to train it
+7 submit programme, the programme, the thing used to train, the thing want to do programme on, 
+false = prevent a gene in the opposite orientation being predicted, then where going to
+
+
+```bash
+for Assembly in $(ls assembly/spades/*/HL/filtered_contigs/*_500bp_renamed.fasta); do
+Strain=$(echo $Assembly | rev | cut -d '/' -f3 | rev)
+Organism=$(echo $Assembly | rev | cut -d '/' -f4 | rev)
+OutDir=assembly/augustus/$Organism/$Strain/filtered_contigs
+ProgDir=/home/halesk/git_repos/tools/gene_prediction/augustus
+GeneModel=P.cactorum_10300_masked_braker
+echo "ProgDir/submit_augustus.sh $GeneModel $Assembly false $OutDir"
+qsub $ProgDir/submit_augustus.sh $GeneModel $Assembly false $OutDir
+done
+```
+
+###Gene prediction 2 - atg.pl prediction of ORFs
+
+Open reading frame predictions were made using the run_ORF_finder.sh script. This pipeline also 
+identifies open reading frames containing Signal peptide sequences and RxLRs. 
+This pipeline was run with the following commands:
+
+```bash
+ProgDir=/home/halesk/git_repos/tools/gene_prediction/ORF_finder
+for Assembly in $(ls assembly/spades/*/HL/filtered_contigs/*_500bp_renamed.fasta); do
+qsub $ProgDir/run_ORF_finder.sh $Assembly
+done
+```
+
+
+The Gff files from the the ORF finder are not in true Gff3 format. These were corrected using the following commands:
+
+```bash
+for ORF_Gff in $(ls gene_pred/ORF_finder/*/*/*_ORF.gff); do
+Strain=$(echo $ORF_Gff | rev | cut -f2 -d '/' | rev)
+Organism=$(echo $ORF_Gff | rev | cut -f3 -d '/' | rev)
+ProgDir=~/git_repos/tools/seq_tools/feature_annotation
+ORF_Gff_mod=gene_pred/ORF_finder/$Organism/$Strain/"$Strain"_ORF_corrected.gff3
+$ProgDir/gff_corrector.pl $ORF_Gff > $ORF_Gff_mod
+done
+```
+
+run this once got output from ORF above.
+
+
+#Genes with homology to PHIbase
+
+Predicted gene models were searched against the PHIbase database using tBLASTx.
+
+```bash
+ProgDir=/home/halesk/git_repos/tools/pathogen/blast
+Query=../../phibase/v3.8/PHI_accessions.fa
+for Assembly in $(ls assembly/spades/*/*/filtered_contigs/*_500bp_renamed.fasta); do
+qsub $ProgDir/blast_pipe.sh $Query protein $Assembly
+done
+```
+
+    
+    
+    
+    
+    
+    
+Below: what was on Readme before that Andrew did:
 <!--
 Quast
 
