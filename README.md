@@ -213,7 +213,7 @@ false = prevent a gene in the opposite orientation being predicted, then where g
 for Assembly in $(ls assembly/spades/*/HL/filtered_contigs/*_500bp_renamed.fasta); do
 Strain=$(echo $Assembly | rev | cut -d '/' -f3 | rev)
 Organism=$(echo $Assembly | rev | cut -d '/' -f4 | rev)
-OutDir=assembly/augustus/$Organism/$Strain/filtered_contigs
+OutDir=gene_pred/augustus/$Organism/$Strain/filtered_contigs
 ProgDir=/home/halesk/git_repos/tools/gene_prediction/augustus
 GeneModel=P.cactorum_10300_masked_braker
 echo "ProgDir/submit_augustus.sh $GeneModel $Assembly false $OutDir"
@@ -250,6 +250,8 @@ done
 run this once got output from ORF above.
 
 
+###Genomic analysis
+
 #Genes with homology to PHIbase
 
 Predicted gene models were searched against the PHIbase database using tBLASTx.
@@ -262,10 +264,54 @@ qsub $ProgDir/blast_pipe.sh $Query protein $Assembly
 done
 ```
 
+    #Interproscan
+    Interproscan was used to give gene models functional annotations
+```bash
+ProgDir=/home/armita/git_repos/emr_repos/tools/seq_tools/feature_annotation/interproscan/
+for Genes in $(ls gene_pred/augustus/*/*/filtered_contigs/*_EMR_singlestrand_aug_out.aa); do
+echo $Genes; cat $Genes | grep '>' |wc -l
+$ProgDir/sub_interproscan.sh $Genes
+done
+```
+    
+    #Signal peptide prediction
     
     
-    
-    
+    ### A) From Augustus gene models - Signal peptide
+
+Required programs:
+ * SigP
+ * biopython
+
+
+Proteins that were predicted to contain signal peptides were identified using
+the following commands:
+
+```bash
+for Proteome in $(ls gene_pred/augustus/*/*/filtered_contigs/*_EMR_singlestrand_aug_out.aa); do
+SplitfileDir=/home/halesk/git_repos/tools/seq_tools/feature_annotation/signal_peptides
+ProgDir=/home/halesk/git_repos/tools/seq_tools/feature_annotation/signal_peptides
+Strain=$(echo $Proteome | rev | cut -f3 -d '/' | rev)
+Organism=$(echo $Proteome | rev | cut -f4 -d '/' | rev)
+SplitDir=gene_pred/Augustus_split/$Organism/$Strain
+mkdir -p $SplitDir
+BaseName="$Organism""_$Strain"_Augustus_preds
+$SplitfileDir/splitfile_500.py --inp_fasta $Proteome --out_dir $SplitDir --out_base $BaseName
+for File in $(ls $SplitDir/*_Augustus_preds_*); do
+Jobs=$(qstat | grep 'pred_sigP' | grep 'qw' | wc -l)
+while [ $Jobs -ge 1 ]; do
+sleep 10
+printf "."
+Jobs=$(qstat | grep 'pred_sigP' | grep 'qw' | wc -l)
+done
+printf "\n"
+echo $File
+#qsub $ProgDir/pred_sigP.sh $File
+qsub $ProgDir/pred_sigP.sh $File signalp-4.1
+done
+done
+```
+
     
     
 Below: what was on Readme before that Andrew did:
