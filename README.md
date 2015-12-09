@@ -247,7 +247,7 @@ $ProgDir/gff_corrector.pl $ORF_Gff > $ORF_Gff_mod
 done
 ```
 
-run this once got output from ORF above.
+run this once got output from ORF above. - not done?
 
 
 ###Genomic analysis
@@ -264,7 +264,97 @@ qsub $ProgDir/blast_pipe.sh $Query protein $Assembly
 done
 ```
 
-    #Interproscan
+The above didn't work so trying submitting again with commands below
+
+
+## 5.1 Identifying avirulence genes
+
+Protein sequence of previously characterised oomycete avirulence genes was used in BLAST searches against
+assemlies.
+
+```bash
+mkdir -p analysis/blast_homology/oomycete_avr_genes/
+cp ../idris/analysis/blast_homology/oomycete_avr_genes/appended_oomycete_avr_cds.fasta analysis/blast_homology/oomycete_avr_genes/appended_oomycete_avr_cds.fasta 
+ProgDir=/home/halesk/git_repos/tools/pathogen/blast
+Query=analysis/blast_homology/oomycete_avr_genes/appended_oomycete_avr_cds.fasta
+for Assembly in $(ls assembly/spades/*/*/filtered_contigs/*_500bp_renamed.fasta); do
+echo $Assembly
+qsub $ProgDir/blast_pipe.sh $Query dna $Assembly
+done
+```
+
+You will need to run the conversion of these files to gff annotations as was shown in the previous email
+
+
+Once blast searches had completed, the BLAST hits were converted to GFF
+annotations:
+
+2nd line file want to use (one we imported into excel)
+3rd line is setting the output directory
+4th line - what column called
+5th - no of blast hits - do I want every blast hit annotated (some may be very low confidence) so choose what no of blast hits want to make
+
+```bash
+ProgDir=/home/halesk/git_repos/tools/pathogen/blast
+for BlastHits in $(ls analysis/blast_homology/*/*/*_appended_oomycete_avr_cds.fasta_homologs.csv); do
+HitsGff=$(echo $BlastHits | sed 's/csv/gff/g')
+Column2=BLAST_homolog
+NumHits=5
+$ProgDir/blast2gff.pl $Column2 $NumHits $BlastHits > $HitsGff
+done
+```
+
+
+
+Following blasting PHIbase to the genome, the hits were filtered by effect on virulence.
+
+The following commands were used to do this:
+
+```bash
+for BlastHits in $(ls analysis/blast_homology/*/*/*_PHI_accessions.fa_homologs.csv); do 
+OutFile=$(echo $BlastHits | sed 's/.csv/_virulence.csv/g')
+paste -d '\t' ../../phibase/v3.8/PHI_headers.csv ../../phibase/v3.8/PHI_virulence.csv $BlastHits | cut -f-3,1185- > $OutFile
+cat $OutFile | grep 'contig' | cut -f2 | sort | uniq -c
+done
+```
+
+This is getting files that are outside of our project directories (in harrison lab) called phibase. 
+To turn into a loop  make a loop that captures csv file. 
+For output file use sed command - replace .csv with virulence_.csv as earlier or an is written use cut to cut out organisms/strain
+
+results should look like this once phibase run:
+
+  1  
+  3 chemistry target
+  32 Chemistry target
+  8  effector (plant avirulence determinant)
+  13 Effector (plant avirulence determinant)
+  2 Enhanced antagonism
+  8  increased virulence
+  5  increased virulence (Hypervirulence)
+  2 Increased virulence (hypervirulence)
+  21 Increased virulence (Hypervirulence)
+  84 Lethal
+  13  loss of pathogenicity
+  237 Loss of pathogenicity
+  9  mixed outcome
+  52  mixed outcome
+  83 Mixed outcome
+  66  reduced virulence
+  12 reduced virulence
+  696 Reduced virulence
+  1 Reduced Virulence
+  30  unaffected pathogenicity
+  786 Unaffected pathogenicity
+  1 Wild-type mutualism
+** Blast results of note: **
+
+'Result A'
+
+
+
+
+    ###Interproscan
     Interproscan was used to give gene models functional annotations
 ```bash
 ProgDir=/home/armita/git_repos/emr_repos/tools/seq_tools/feature_annotation/interproscan/
@@ -273,6 +363,42 @@ echo $Genes; cat $Genes | grep '>' |wc -l
 $ProgDir/sub_interproscan.sh $Genes
 done
 ```
+
+Still need to run below once interproscan finished!
+
+ ProgDir=/home/halesk/git_repos/tools/seq_tools/feature_annotation/interproscan
+    Genes=gene_pred/augustus/N.ditissima/R0905_v2/R0905_v2_EMR_aug_out.aa
+    InterProRaw=gene_pred/interproscan/N.ditissima/R0905_v2/raw
+    $ProgDir/append_interpro.sh $Genes $InterProRaw
+
+Already changed first line
+Change second line to include this as a for loop
+gene_pred/augustus/P.violae/DE/filtered_contigs/DE_EMR_singlestrand_aug_out.aa 
+
+   ### B) SwissProt
+Putative ID's were given to genes with homology to SwissProt (the highly curated gene subset of UniProt). IDs were given by through BLASTP searches.
+
+qlogin
+ProjDir=/home/groups/harrisonlab/project_files/pythium
+cd $ProjDir
+for Proteins in $(ls gene_pred/augustus/*/*/filtered_contigs/*_EMR_singlestrand_aug_out.aa); do
+Strain=$(echo $ORF_Gff | rev | cut -f3 -d '/' | rev)
+Organism=$(echo $ORF_Gff | rev | cut -f4 -d '/' | rev)
+OutDir=$ProjDir/gene_pred/uniprot/$Organism/$Strain
+mkdir -p $OutDir
+blastp \
+-db /home/groups/harrisonlab/uniprot/swissprot/uniprot_sprot \
+-query $Proteins
+-out $OutDir/swissprot_v2015_09_hits.tbl  \
+-evalue 1e-100 \
+-outfmt 6 \
+-num_threads 8 \
+-num_alignments 10
+    
+    
+    Still need to run 2nd part of interproscan again - on this bit too?
+    
+    
     
     #Signal peptide prediction
     
@@ -312,6 +438,200 @@ done
 done
 ```
 
+    ###Orthology analysis
+    
+    # For a comparison between 3 Pythium clade 2 isolates (Pult, Paph, Pirr, PvHL, PvDE)
+
+
+```bash
+  ProjDir=/home/groups/harrisonlab/project_files/pythium
+  cd $ProjDir
+  IsolateAbrv=PvHL_PvDE_Pirr_Pult_Paph
+  WorkDir=analysis/orthology/orthomcl/$IsolateAbrv
+  mkdir -p $WorkDir
+  mkdir -p $WorkDir/formatted
+  mkdir -p $WorkDir/goodProteins
+  mkdir -p $WorkDir/badProteins  
+```
+
+## Format fasta files
+
+### for P.violae HL
+```bash
+Taxon_code=PvHL
+Fasta_file=gene_pred/augustus/P.violae/HL/filtered_contigs/HL_EMR_singlestrand_aug_out.aa
+Id_field=1
+orthomclAdjustFasta $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+```
+
+### for P.violae DE
+```bash
+Taxon_code=PvDE
+Fasta_file=gene_pred/augustus/P.violae/DE/filtered_contigs/DE_EMR_singlestrand_aug_out.aa
+Id_field=1
+orthomclAdjustFasta $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+```
+
+### for P.irregulare
+```bash
+Taxon_code=Pirr
+Fasta_file=raw_dna/external/P.irregulare/DAOMBR486/pir.maker.proteins.fasta
+Id_field=1
+orthomclAdjustFasta $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+```
+
+### for P.ultimum
+```bash
+Taxon_code=Pult
+Fasta_file=raw_dna/external/P.ultimumvar.ultimum/DAOMBR144/pythium_ultimum_proteins.fasta
+Id_field=1
+orthomclAdjustFasta $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+```
+
+### for P.aphanidermatum
+```bash
+Taxon_code=Paph
+Fasta_file=raw_dna/external/P.aphanidermatum/DAOM_BR444/pag1.maker.proteins.fasta
+Id_field=1
+orthomclAdjustFasta $Taxon_code $Fasta_file $Id_field
+mv "$Taxon_code".fasta $WorkDir/formatted/"$Taxon_code".fasta
+```
+
+
+## Filter proteins into good and poor sets.
+
+```bash
+  Input_dir=$WorkDir/formatted
+  Min_length=10
+  Max_percent_stops=20
+  Good_proteins_file=$WorkDir/goodProteins/goodProteins.fasta
+  Poor_proteins_file=$WorkDir/badProteins/poorProteins.fasta
+  orthomclFilterFasta $Input_dir $Min_length $Max_percent_stops $Good_proteins_file $Poor_proteins_file
+```
+
+## Perform an all-vs-all blast of the proteins
+
+```bash
+BlastDB=$WorkDir/blastall/$IsolateAbrv.db
+
+makeblastdb -in $Good_proteins_file -dbtype prot -out $BlastDB
+BlastOut=$WorkDir/all-vs-all_results.tsv
+mkdir -p $WorkDir/splitfiles
+
+SplitDir=/home/armita/git_repos/emr_repos/tools/seq_tools/feature_annotation/signal_peptides
+$SplitDir/splitfile_500.py --inp_fasta $Good_proteins_file --out_dir $WorkDir/splitfiles --out_base goodProteins
+
+ProgDir=/home/armita/git_repos/emr_repos/scripts/phytophthora/pathogen/orthology  
+for File in $(find $WorkDir/splitfiles); do
+Jobs=$(qstat | grep 'blast_500' | grep 'qw' | wc -l)
+while [ $Jobs -gt 1 ]; do
+sleep 10
+printf "."
+Jobs=$(qstat | grep 'blast_500' | grep 'qw' | wc -l)
+done
+printf "\n"
+echo $File
+BlastOut=$(echo $File | sed 's/.fa/.tab/g')
+qsub $ProgDir/blast_500.sh $BlastDB $File $BlastOut
+done
+```
+
+done down to here!
+below still calling on variables set above, so may need to set the variable again - if log back into same screen may be ok
+
+## Merge the all-vs-all blast results  
+```bash  
+  MergeHits="$IsolateAbrv"_blast.tab
+  printf "" > $MergeHits
+  for Num in $(ls $WorkDir/splitfiles/*.tab | rev | cut -f1 -d '_' | rev | sort -n); do
+    File=$(ls $WorkDir/splitfiles/*_$Num)
+    cat $File
+  done > $MergeHits
+```
+
+## Perform ortholog identification
+
+```bash
+  ProgDir=~/git_repos/emr_repos/tools/pathogen/orthology/orthoMCL
+  MergeHits="$IsolateAbrv"_blast.tab
+  GoodProts=$WorkDir/goodProteins/goodProteins.fasta
+  qsub $ProgDir/qsub_orthomcl.sh $MergeHits $GoodProts
+```
+
+## Plot venn diagrams:
+
+```bash
+  ProgDir=~/git_repos/emr_repos/tools/pathogen/orthology/venn_diagrams
+  $ProgDir/ven_diag_5_way.R --inp $WorkDir/"$IsolateAbrv"_orthogroups.tab --out $WorkDir/"$IsolateAbrv"_orthogroups.pdf
+```
+
+Output was a pdf file of the venn diagram.
+
+The following additional information was also provided. The format of the
+following lines is as follows:
+
+Isolate name (total number of orthogroups)
+number of unique singleton genes
+number of unique groups of inparalogs
+
+```
+  [1] "Pcac (8494)"
+  [1] 586
+  [1] 126
+  [1] "Pcap (7393)"
+  [1] 348
+  [1] 59
+  [1] "Pinf (8079)"
+  [1] 601
+  [1] 107
+  [1] "Ppar (8687)"
+  [1] 732
+  [1] 95
+  [1] "Psoj (7592)"
+  [1] 642
+  [1] 153
+  NULL
+```
+    
+    more on email for above
+    
+    
+    
+    ###Downloading RNA seq data from NCBI
+    
+    The commands used to do this can be found in /pythium/Gene_pred
+    
+    
+    ###The batch files of predicted secreted proteins needed to be combined into a
+single file for each strain. This was done with the following commands:
+```bash
+
+for SplitDir in $(ls -d gene_pred/Augustus_split/*/*/); do
+Strain=$(echo $SplitDir | cut -d '/' -f4)
+Organism=$(echo $SplitDir | cut -d '/' -f3)
+InStringAA=''
+InStringNeg=''
+InStringTab=''
+InStringTxt=''
+SigpDir=Augustus_signalp-4.1
+for GRP in $(ls -l $SplitDir/*_Augustus_preds_*.fa | rev | cut -d '_' -f1 | rev | sort -n); do  
+InStringAA="$InStringAA gene_pred/$SigpDir/$Organism/$Strain/split/"$Organism"_"$Strain"_Augustus_preds_$GRP""_sp.aa";  
+InStringNeg="$InStringNeg gene_pred/$SigpDir/$Organism/$Strain/split/"$Organism"_"$Strain"_Augustus_preds_$GRP""_sp_neg.aa";  
+InStringTab="$InStringTab gene_pred/$SigpDir/$Organism/$Strain/split/"$Organism"_"$Strain"_Augustus_preds_$GRP""_sp.tab";
+InStringTxt="$InStringTxt gene_pred/$SigpDir/$Organism/$Strain/split/"$Organism"_"$Strain"_Augustus_preds_$GRP""_sp.txt";  
+done
+cat $InStringAA > gene_pred/$SigpDir/$Organism/$Strain/"$Strain"_aug_sp.aa
+cat $InStringNeg > gene_pred/$SigpDir/$Organism/$Strain/"$Strain"_aug_neg_sp.aa
+tail -n +2 -q $InStringTab > gene_pred/$SigpDir/$Organism/$Strain/"$Strain"_aug_sp.tab
+cat $InStringTxt > gene_pred/$SigpDir/$Organism/$Strain/"$Strain"_aug_sp.txt
+done
+```
+
+    
     
     
 Below: what was on Readme before that Andrew did:
