@@ -238,16 +238,18 @@ done
 The Gff files from the the ORF finder are not in true Gff3 format. These were corrected using the following commands:
 
 ```bash
-for ORF_Gff in $(ls gene_pred/ORF_finder/*/*/*_ORF.gff); do
+for ORF_Gff in $(ls gene_pred/ORF_finder/*/*/*_ORF.gff | grep -v '_atg_'); do
 Strain=$(echo $ORF_Gff | rev | cut -f2 -d '/' | rev)
 Organism=$(echo $ORF_Gff | rev | cut -f3 -d '/' | rev)
 ProgDir=~/git_repos/tools/seq_tools/feature_annotation
 ORF_Gff_mod=gene_pred/ORF_finder/$Organism/$Strain/"$Strain"_ORF_corrected.gff3
 $ProgDir/gff_corrector.pl $ORF_Gff > $ORF_Gff_mod
 done
-```
 
-run this once got output from ORF above. - not done?
+
+THIS GAVE US GFF3 FILES IN ls gene_pred/ORF_finder/
+_ORF_corrected.gff3  P.violae/  - THIS IS WHAT WE PUT INTO GENIUS          
+
 
 
 ###Genomic analysis
@@ -264,49 +266,10 @@ qsub $ProgDir/blast_pipe.sh $Query protein $Assembly
 done
 ```
 
-The above didn't work so trying submitting again with commands below
-
-
-## 5.1 Identifying avirulence genes
-
-Protein sequence of previously characterised oomycete avirulence genes was used in BLAST searches against
-assemlies.
-
-```bash
-mkdir -p analysis/blast_homology/oomycete_avr_genes/
-cp ../idris/analysis/blast_homology/oomycete_avr_genes/appended_oomycete_avr_cds.fasta analysis/blast_homology/oomycete_avr_genes/appended_oomycete_avr_cds.fasta 
-ProgDir=/home/halesk/git_repos/tools/pathogen/blast
-Query=analysis/blast_homology/oomycete_avr_genes/appended_oomycete_avr_cds.fasta
-for Assembly in $(ls assembly/spades/*/*/filtered_contigs/*_500bp_renamed.fasta); do
-echo $Assembly
-qsub $ProgDir/blast_pipe.sh $Query dna $Assembly
-done
-```
-
-You will need to run the conversion of these files to gff annotations as was shown in the previous email
-
-
-Once blast searches had completed, the BLAST hits were converted to GFF
-annotations:
-
-2nd line file want to use (one we imported into excel)
-3rd line is setting the output directory
-4th line - what column called
-5th - no of blast hits - do I want every blast hit annotated (some may be very low confidence) so choose what no of blast hits want to make
-
-```bash
-ProgDir=/home/halesk/git_repos/tools/pathogen/blast
-for BlastHits in $(ls analysis/blast_homology/*/*/*_appended_oomycete_avr_cds.fasta_homologs.csv); do
-HitsGff=$(echo $BlastHits | sed 's/csv/gff/g')
-Column2=BLAST_homolog
-NumHits=5
-$ProgDir/blast2gff.pl $Column2 $NumHits $BlastHits > $HitsGff
-done
-```
-
-
+The above didn't work so trying submitting again -worked second time?
 
 Following blasting PHIbase to the genome, the hits were filtered by effect on virulence.
+
 
 The following commands were used to do this:
 
@@ -353,6 +316,49 @@ results should look like this once phibase run:
 
 
 
+## 5.1 Identifying avirulence genes
+
+Protein sequence of previously characterised oomycete avirulence genes was used in BLAST searches against
+assemlies.
+
+```bash
+mkdir -p analysis/blast_homology/oomycete_avr_genes/
+cp ../idris/analysis/blast_homology/oomycete_avr_genes/appended_oomycete_avr_cds.fasta analysis/blast_homology/oomycete_avr_genes/appended_oomycete_avr_cds.fasta 
+ProgDir=/home/halesk/git_repos/tools/pathogen/blast
+Query=analysis/blast_homology/oomycete_avr_genes/appended_oomycete_avr_cds.fasta
+for Assembly in $(ls assembly/spades/*/*/filtered_contigs/*_500bp_renamed.fasta); do
+echo $Assembly
+qsub $ProgDir/blast_pipe.sh $Query dna $Assembly
+done
+```
+
+You will need to run the conversion of these files to gff annotations as was shown in the previous email
+
+
+Once blast searches had completed, the BLAST hits were converted to GFF
+annotations:
+
+2nd line file want to use (one we imported into excel)
+3rd line is setting the output directory
+4th line - what column called
+5th - no of blast hits - do I want every blast hit annotated (some may be very low confidence) so choose what no of blast hits want to make
+
+```bash
+ProgDir=/home/halesk/git_repos/tools/pathogen/blast
+for BlastHits in $(ls analysis/blast_homology/*/*/*_appended_oomycete_avr_cds.fasta_homologs.csv); do
+HitsGff=$(echo $BlastHits | sed 's/csv/gff/g')
+Column2=BLAST_homolog
+NumHits=5
+$ProgDir/blast2gff.pl $Column2 $NumHits $BlastHits > $HitsGff
+done
+```
+
+
+
+
+
+
+
 
     ###Interproscan
     Interproscan was used to give gene models functional annotations
@@ -364,16 +370,19 @@ $ProgDir/sub_interproscan.sh $Genes
 done
 ```
 
-Still need to run below once interproscan finished!
+We run the command below once interproscan finishes. This combines the interproscan files.
+LOOK CAREFULLY AT FILE DIRECTORIES, DON'T HAVE ORGANISM IN MINE IN INTERPROSCAN FOLDER.
+Where are the outputs of this and what do we do with them?
 
- ProgDir=/home/halesk/git_repos/tools/seq_tools/feature_annotation/interproscan
-    Genes=gene_pred/augustus/N.ditissima/R0905_v2/R0905_v2_EMR_aug_out.aa
-    InterProRaw=gene_pred/interproscan/N.ditissima/R0905_v2/raw
-    $ProgDir/append_interpro.sh $Genes $InterProRaw
+ProgDir=/home/halesk/git_repos/tools/seq_tools/feature_annotation/interproscan
+for Genes in $(ls gene_pred/interproscan/*/filtered_contigs/*_EMR_singlestrand_aug_out.aa_split_*.fa); do
+Strain=$(echo $Genes | rev | cut -f3 -d '/'| rev)
+Organism=$(echo $Genes | rev | cut -f4 -d '/'| rev)
+InterProRaw=gene_pred/interproscan/$Strain/filtered_contigs/raw
+$ProgDir/append_interpro.sh $Genes $InterProRaw
+done
+    
 
-Already changed first line
-Change second line to include this as a for loop
-gene_pred/augustus/P.violae/DE/filtered_contigs/DE_EMR_singlestrand_aug_out.aa 
 
    ### B) SwissProt
 Putative ID's were given to genes with homology to SwissProt (the highly curated gene subset of UniProt). IDs were given by through BLASTP searches.
@@ -437,6 +446,33 @@ qsub $ProgDir/pred_sigP.sh $File signalp-4.1
 done
 done
 ```
+ ###The batch files of predicted secreted proteins needed to be combined into a
+single file for each strain. This was done with the following commands:
+```bash
+
+for SplitDir in $(ls -d gene_pred/Augustus_split/*/*/); do
+Strain=$(echo $SplitDir | cut -d '/' -f3)
+Organism=$(echo $SplitDir | cut -d '/' -f4)
+InStringAA=''
+InStringNeg=''
+InStringTab=''
+InStringTxt=''
+SigpDir=Augustus_signalp-4.1
+for GRP in $(ls -l $SplitDir/*_Augustus_preds_*.fa | rev | cut -d '_' -f1 | rev | sort -n); do  
+InStringAA="$InStringAA gene_pred/$SigpDir/$Organism/$Strain/split/"$Organism"_"$Strain"_Augustus_preds_$GRP""_sp.aa";  
+InStringNeg="$InStringNeg gene_pred/$SigpDir/$Organism/$Strain/split/"$Organism"_"$Strain"_Augustus_preds_$GRP""_sp_neg.aa";  
+InStringTab="$InStringTab gene_pred/$SigpDir/$Organism/$Strain/split/"$Organism"_"$Strain"_Augustus_preds_$GRP""_sp.tab";
+InStringTxt="$InStringTxt gene_pred/$SigpDir/$Organism/$Strain/split/"$Organism"_"$Strain"_Augustus_preds_$GRP""_sp.txt";  
+done
+cat $InStringAA > gene_pred/$SigpDir/$Organism/$Strain/"$Strain"_aug_sp.aa
+cat $InStringNeg > gene_pred/$SigpDir/$Organism/$Strain/"$Strain"_aug_neg_sp.aa
+tail -n +2 -q $InStringTab > gene_pred/$SigpDir/$Organism/$Strain/"$Strain"_aug_sp.tab
+cat $InStringTxt > gene_pred/$SigpDir/$Organism/$Strain/"$Strain"_aug_sp.txt
+done
+```
+
+    
+    
 
     ###Orthology analysis
     
@@ -545,12 +581,12 @@ below still calling on variables set above, so may need to set the variable agai
 
 ## Merge the all-vs-all blast results  
 ```bash  
-  MergeHits="$IsolateAbrv"_blast.tab
-  printf "" > $MergeHits
-  for Num in $(ls $WorkDir/splitfiles/*.tab | rev | cut -f1 -d '_' | rev | sort -n); do
-    File=$(ls $WorkDir/splitfiles/*_$Num)
-    cat $File
-  done > $MergeHits
+MergeHits="$IsolateAbrv"_blast.tab
+printf "" > $MergeHits
+for Num in $(ls $WorkDir/splitfiles/*.tab | rev | cut -f1 -d '_' | rev | sort -n); do
+File=$(ls $WorkDir/splitfiles/*_$Num)
+cat $File
+done > $MergeHits
 ```
 
 ## Perform ortholog identification
@@ -606,33 +642,7 @@ number of unique groups of inparalogs
     The commands used to do this can be found in /pythium/Gene_pred
     
     
-    ###The batch files of predicted secreted proteins needed to be combined into a
-single file for each strain. This was done with the following commands:
-```bash
-
-for SplitDir in $(ls -d gene_pred/Augustus_split/*/*/); do
-Strain=$(echo $SplitDir | cut -d '/' -f4)
-Organism=$(echo $SplitDir | cut -d '/' -f3)
-InStringAA=''
-InStringNeg=''
-InStringTab=''
-InStringTxt=''
-SigpDir=Augustus_signalp-4.1
-for GRP in $(ls -l $SplitDir/*_Augustus_preds_*.fa | rev | cut -d '_' -f1 | rev | sort -n); do  
-InStringAA="$InStringAA gene_pred/$SigpDir/$Organism/$Strain/split/"$Organism"_"$Strain"_Augustus_preds_$GRP""_sp.aa";  
-InStringNeg="$InStringNeg gene_pred/$SigpDir/$Organism/$Strain/split/"$Organism"_"$Strain"_Augustus_preds_$GRP""_sp_neg.aa";  
-InStringTab="$InStringTab gene_pred/$SigpDir/$Organism/$Strain/split/"$Organism"_"$Strain"_Augustus_preds_$GRP""_sp.tab";
-InStringTxt="$InStringTxt gene_pred/$SigpDir/$Organism/$Strain/split/"$Organism"_"$Strain"_Augustus_preds_$GRP""_sp.txt";  
-done
-cat $InStringAA > gene_pred/$SigpDir/$Organism/$Strain/"$Strain"_aug_sp.aa
-cat $InStringNeg > gene_pred/$SigpDir/$Organism/$Strain/"$Strain"_aug_neg_sp.aa
-tail -n +2 -q $InStringTab > gene_pred/$SigpDir/$Organism/$Strain/"$Strain"_aug_sp.tab
-cat $InStringTxt > gene_pred/$SigpDir/$Organism/$Strain/"$Strain"_aug_sp.txt
-done
-```
-
-    
-    
+   
     
 Below: what was on Readme before that Andrew did:
 <!--
