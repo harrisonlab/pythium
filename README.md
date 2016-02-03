@@ -450,9 +450,11 @@ done
 single file for each strain. This was done with the following commands:
 ```bash
 
-for SplitDir in $(ls -d gene_pred/Augustus_split/*/*/); do
-Strain=$(echo $SplitDir | cut -d '/' -f3)
-Organism=$(echo $SplitDir | cut -d '/' -f4)
+for SplitDir in $(ls -d gene_pred/Augustus_split/*/*); do
+Strain=$(echo $SplitDir | rev | cut -d '/' -f1 | rev)
+Organism=$(echo $SplitDir | rev |cut -d '/' -f2 | rev)
+echo $Strain
+echo $Organism
 InStringAA=''
 InStringNeg=''
 InStringTab=''
@@ -470,6 +472,7 @@ tail -n +2 -q $InStringTab > gene_pred/$SigpDir/$Organism/$Strain/"$Strain"_aug_
 cat $InStringTxt > gene_pred/$SigpDir/$Organism/$Strain/"$Strain"_aug_sp.txt
 done
 ```
+Done this and think it worked, where are the files?!
 
     
     
