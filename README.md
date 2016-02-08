@@ -259,9 +259,9 @@ _ORF_corrected.gff3  P.violae/  - THIS IS WHAT WE PUT INTO GENIUS
 Predicted gene models were searched against the PHIbase database using tBLASTx.
 
 ```bash
+for Assembly in $(ls assembly/spades/*/*/filtered_contigs/*_500bp_renamed.fasta); do
 ProgDir=/home/halesk/git_repos/tools/pathogen/blast
 Query=../../phibase/v3.8/PHI_accessions.fa
-for Assembly in $(ls assembly/spades/*/*/filtered_contigs/*_500bp_renamed.fasta); do
 qsub $ProgDir/blast_pipe.sh $Query protein $Assembly
 done
 ```
@@ -381,8 +381,6 @@ Organism=$(echo $Genes | rev | cut -f4 -d '/'| rev)
 InterProRaw=gene_pred/interproscan/$Strain/filtered_contigs/raw
 $ProgDir/append_interpro.sh $Genes $InterProRaw
 done
-    
-
 
    ### B) SwissProt
 Putative ID's were given to genes with homology to SwissProt (the highly curated gene subset of UniProt). IDs were given by through BLASTP searches.
@@ -487,6 +485,7 @@ Done this and think it worked, where are the files?!
   cd $ProjDir
   IsolateAbrv=PvHL_PvDE_Pirr_Pult_Paph
   WorkDir=analysis/orthology/orthomcl/$IsolateAbrv
+  
   mkdir -p $WorkDir
   mkdir -p $WorkDir/formatted
   mkdir -p $WorkDir/goodProteins
@@ -579,12 +578,12 @@ qsub $ProgDir/blast_500.sh $BlastDB $File $BlastOut
 done
 ```
 
-done down to here!
+
 below still calling on variables set above, so may need to set the variable again - if log back into same screen may be ok
 
 ## Merge the all-vs-all blast results  
 ```bash  
-MergeHits="$IsolateAbrv"_blast.tab
+MergeHits=$WorkDir/"$IsolateAbrv"_blast.tab
 printf "" > $MergeHits
 for Num in $(ls $WorkDir/splitfiles/*.tab | rev | cut -f1 -d '_' | rev | sort -n); do
 File=$(ls $WorkDir/splitfiles/*_$Num)
@@ -592,21 +591,32 @@ cat $File
 done > $MergeHits
 ```
 
+
 ## Perform ortholog identification
 
 ```bash
-  ProgDir=~/git_repos/emr_repos/tools/pathogen/orthology/orthoMCL
-  MergeHits="$IsolateAbrv"_blast.tab
-  GoodProts=$WorkDir/goodProteins/goodProteins.fasta
-  qsub $ProgDir/qsub_orthomcl.sh $MergeHits $GoodProts
+ProgDir=~/git_repos/tools/pathogen/orthology/orthoMCL
+MergeHits=WorkDir"$IsolateAbrv"_blast.tab
+GoodProts=$WorkDir/goodProteins/goodProteins.fasta
+qsub $ProgDir/qsub_orthomcl.sh $MergeHits $GoodProts
 ```
+In this script above and the one abouve that, we ran the line starting with MergeHits
+without the WorkDir in it. The output file ended up in our Pythium folder. We moved them
+to the analysis/orthology/ortholmcl/PvHL_PvDe... folder but we think adding in
+Workdir to that line should put the output file in there anyway.
+
+
+Done down to here!
 
 ## Plot venn diagrams:
 
 ```bash
-  ProgDir=~/git_repos/emr_repos/tools/pathogen/orthology/venn_diagrams
-  $ProgDir/ven_diag_5_way.R --inp $WorkDir/"$IsolateAbrv"_orthogroups.tab --out $WorkDir/"$IsolateAbrv"_orthogroups.pdf
+ProgDir=~/git_repos/tools/pathogen/orthology/venn_diagrams
+$ProgDir/ven_diag_5_way.R --inp $WorkDir/"$IsolateAbrv"_orthogroups.tab --out $WorkDir/"$IsolateAbrv"_orthogroups.pdf
 ```
+Tried script above, says "Error in library(optparse) : there is no package called ‘optparse’
+Execution halted"
+
 
 Output was a pdf file of the venn diagram.
 
