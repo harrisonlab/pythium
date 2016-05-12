@@ -30,6 +30,10 @@ and annotation.
   mkdir -p raw_dna/paired/P.violae/HL/R
   mkdir -p raw_dna/paired/P.violae/DE/F
   mkdir -p raw_dna/paired/P.violae/DE/R
+  mkdir -p raw_dna/paired/P.sulcaum/P67/F
+  mkdir -p raw_dna/paired/P.sulcaum/P67/R
+  mkdir -p raw_dna/paired/P.intermedium/P107/F
+  mkdir -p raw_dna/paired/P.intermedium/P107/R
 
   RawDat=/home/groups/harrisonlab/raw_data/raw_seq/raw_reads/pythium/150910_M01678_0026_D0HRG
   cp $RawDat/HL-Pviolae_S1_L001_R1_001.fastq.gz raw_dna/paired/P.violae/HL/F/.
@@ -43,6 +47,12 @@ and annotation.
   cp $RawDat/HL-Pviolae_S1_L001_R2_001.fastq.gz raw_dna/paired/P.violae/HL/R/HL-Pviolae_run2_S1_L001_R2_001.fastq.gz
   cp $RawDat/DE-Pviolae_S2_L001_R1_001.fastq.gz raw_dna/paired/P.violae/DE/F/DE-Pviolae_run2_S2_L001_R1_001.fastq.gz
   cp $RawDat/DE-Pviolae_S2_L001_R2_001.fastq.gz raw_dna/paired/P.violae/DE/R/DE-Pviolae_run2_S2_L001_R2_001.fastq.gz
+
+  RawDat=/home/groups/harrisonlab/raw_data/raw_seq/raw_reads/160503_M04465_0013_AMLD4
+  cp $RawDat/PsulcaumP67_S1_L001_R1_001.fastq.gz raw_dna/paired/P.sulcaum/P67/F/.
+  cp $RawDat/PsulcaumP67_S1_L001_R2_001.fastq.gz raw_dna/paired/P.sulcaum/P67/R/.
+  cp $RawDat/PintermediumP107_S2_L001_R1_001.fastq.gz raw_dna/paired/P.intermedium/P107/F/.
+  cp $RawDat/PintermediumP107_S2_L001_R2_001.fastq.gz raw_dna/paired/P.intermedium/P107/F/.
 ```
 
 
@@ -122,19 +132,19 @@ This is what I submitted for assembly
 
 ```bash
 
-for StrainPath in $(ls -d qc_dna/paired/*/*); do 
-ProgDir=~/git_repos/tools/seq_tools/assemblers/spades/multiple_libraries; 
-Strain=$(echo $StrainPath | rev | cut -f1 -d '/' | rev); 
-Organism=$(echo $StrainPath | rev | cut -f2 -d '/' | rev); 
-F1_Read=$(ls $StrainPath/F/*.fq.gz | grep -v 'run2'); 
-R1_Read=$(ls $StrainPath/R/*.fq.gz | grep -v 'run2'); 
-F2_Read=$(ls $StrainPath/F/*.fq.gz | grep 'run2'); 
-R2_Read=$(ls $StrainPath/R/*.fq.gz | grep 'run2'); 
-OutDir=assembly/spades/$Organism/$Strain; 
-echo $F1_Read; 
-echo $R1_Read; 
-echo $F2_Read; 
-echo $R2_Read; 
+for StrainPath in $(ls -d qc_dna/paired/*/*); do
+ProgDir=~/git_repos/tools/seq_tools/assemblers/spades/multiple_libraries;
+Strain=$(echo $StrainPath | rev | cut -f1 -d '/' | rev);
+Organism=$(echo $StrainPath | rev | cut -f2 -d '/' | rev);
+F1_Read=$(ls $StrainPath/F/*.fq.gz | grep -v 'run2');
+R1_Read=$(ls $StrainPath/R/*.fq.gz | grep -v 'run2');
+F2_Read=$(ls $StrainPath/F/*.fq.gz | grep 'run2');
+R2_Read=$(ls $StrainPath/R/*.fq.gz | grep 'run2');
+OutDir=assembly/spades/$Organism/$Strain;
+echo $F1_Read;
+echo $R1_Read;
+echo $F2_Read;
+echo $R2_Read;
 qsub $ProgDir/subSpades_2lib.sh $F1_Read $R1_Read $F2_Read $R2_Read $OutDir correct 10
 done
 ```
@@ -193,7 +203,7 @@ for Assembly in $(ls assembly/spades/*/HL/filtered_contigs/*_500bp_renamed.fasta
 qsub $ProgDir/sub_cegma.sh $Assembly dna
 done
 ```
-Results found in Pythium/gene_pred/cegma  - 
+Results found in Pythium/gene_pred/cegma  -
 
 ###Gene prediction 1  Augustus
 
@@ -201,11 +211,11 @@ Did 2 for AUgustus - 1st with Fusarium - line GeneModel=Fusarium
 then second with P.cactorum
 
 1st line for loop copied from above
-2/3/4 copied from above, cuts out words from file directory to get strain and organism. 
+2/3/4 copied from above, cuts out words from file directory to get strain and organism.
 Then makes out directory
 5 where programme is
 6 using this data to train it
-7 submit programme, the programme, the thing used to train, the thing want to do programme on, 
+7 submit programme, the programme, the thing used to train, the thing want to do programme on,
 false = prevent a gene in the opposite orientation being predicted, then where going to
 
 
@@ -223,8 +233,8 @@ done
 
 ###Gene prediction 2 - atg.pl prediction of ORFs
 
-Open reading frame predictions were made using the run_ORF_finder.sh script. This pipeline also 
-identifies open reading frames containing Signal peptide sequences and RxLRs. 
+Open reading frame predictions were made using the run_ORF_finder.sh script. This pipeline also
+identifies open reading frames containing Signal peptide sequences and RxLRs.
 This pipeline was run with the following commands:
 
 ```bash
@@ -274,15 +284,15 @@ Following blasting PHIbase to the genome, the hits were filtered by effect on vi
 The following commands were used to do this:
 
 ```bash
-for BlastHits in $(ls analysis/blast_homology/*/*/*_PHI_accessions.fa_homologs.csv); do 
+for BlastHits in $(ls analysis/blast_homology/*/*/*_PHI_accessions.fa_homologs.csv); do
 OutFile=$(echo $BlastHits | sed 's/.csv/_virulence.csv/g')
 paste -d '\t' ../../phibase/v3.8/PHI_headers.csv ../../phibase/v3.8/PHI_virulence.csv $BlastHits | cut -f-3,1185- > $OutFile
 cat $OutFile | grep 'contig' | cut -f2 | sort | uniq -c
 done
 ```
 
-This is getting files that are outside of our project directories (in harrison lab) called phibase. 
-To turn into a loop  make a loop that captures csv file. 
+This is getting files that are outside of our project directories (in harrison lab) called phibase.
+To turn into a loop  make a loop that captures csv file.
 For output file use sed command - replace .csv with virulence_.csv as earlier or an is written use cut to cut out organisms/strain
 
 results should look like this once phibase run:
@@ -323,7 +333,7 @@ assemlies.
 
 ```bash
 mkdir -p analysis/blast_homology/oomycete_avr_genes/
-cp ../idris/analysis/blast_homology/oomycete_avr_genes/appended_oomycete_avr_cds.fasta analysis/blast_homology/oomycete_avr_genes/appended_oomycete_avr_cds.fasta 
+cp ../idris/analysis/blast_homology/oomycete_avr_genes/appended_oomycete_avr_cds.fasta analysis/blast_homology/oomycete_avr_genes/appended_oomycete_avr_cds.fasta
 ProgDir=/home/halesk/git_repos/tools/pathogen/blast
 Query=analysis/blast_homology/oomycete_avr_genes/appended_oomycete_avr_cds.fasta
 for Assembly in $(ls assembly/spades/*/*/filtered_contigs/*_500bp_renamed.fasta); do
@@ -401,15 +411,15 @@ blastp \
 -outfmt 6 \
 -num_threads 8 \
 -num_alignments 10
-    
-    
+
+
     Still need to run 2nd part of interproscan again - on this bit too?
-    
-    
-    
+
+
+
     #Signal peptide prediction
-    
-    
+
+
     ### A) From Augustus gene models - Signal peptide
 
 Required programs:
@@ -472,11 +482,11 @@ done
 ```
 Done this and think it worked, where are the files?!
 
-    
-    
+
+
 
     ###Orthology analysis
-    
+
     # For a comparison between 3 Pythium clade 2 isolates (Pult, Paph, Pirr, PvHL, PvDE)
 
 
@@ -485,7 +495,7 @@ Done this and think it worked, where are the files?!
   cd $ProjDir
   IsolateAbrv=PvHL_PvDE_Pirr_Pult_Paph
   WorkDir=analysis/orthology/orthomcl/$IsolateAbrv
-  
+
   mkdir -p $WorkDir
   mkdir -p $WorkDir/formatted
   mkdir -p $WorkDir/goodProteins
@@ -645,18 +655,18 @@ number of unique groups of inparalogs
   [1] 153
   NULL
 ```
-    
+
     more on email for above
-    
-    
-    
+
+
+
     ###Downloading RNA seq data from NCBI
-    
+
     The commands used to do this can be found in /pythium/Gene_pred
-    
-    
-   
-    
+
+
+
+
 Below: what was on Readme before that Andrew did:
 <!--
 Quast
