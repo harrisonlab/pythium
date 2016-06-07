@@ -84,20 +84,27 @@ This was done with fastq-mcf
 
 
 ```bash
-for Strain in $(ls raw_dna/paired/P.*/); do
+for Strain in $(ls -d raw_dna/paired/*/* | grep -e 'P107' -e 'P67'); do
 echo $Strain
 IluminaAdapters=/home/halesk/git_repos/tools/seq_tools/ncbi_adapters.fa
 ProgDir=/home/halesk/git_repos/tools/seq_tools/rna_qc
-Read_F=$(ls raw_dna/paired/P.*/$Strain/F/*.fastq.gz | grep -v 'run2')
-Read_R=$(ls raw_dna/paired/P.*/$Strain/R/*.fastq.gz | grep -v 'run2')
-echo $Read_F
-echo $Read_R
-qsub $ProgDir/rna_qc_fastq-mcf.sh $Read_F $Read_R $IluminaAdapters DNA
-Read_F=$(ls raw_dna/paired/P.*/$Strain/F/*.fastq.gz | grep 'run2')
-Read_R=$(ls raw_dna/paired/P.*/$Strain/R/*.fastq.gz | grep 'run2')
-echo $Read_F
-echo $Read_R
+ReadsF=$(ls $StrainPath/F/*.fastq*)
+        ReadsR=$(ls $StrainPath/R/*.fastq*)
+        echo $ReadsF
+        echo $ReadsR
 qsub $ProgDir/rna_qc_fastq-mcf.sh $Read_F $Read_R $IluminaAdapters DNA
 done
 ```
+
+Trimming was first performed on all strains that had a single run of data:
+
+    for StrainPath in $(ls -d raw_dna/paired/*/* | grep -v -e 'Fus2' -e 'HB6'); do
+        ProgDir=/home/armita/git_repos/emr_repos/tools/seq_tools/rna_qc
+        IlluminaAdapters=/home/armita/git_repos/emr_repos/tools/seq_tools/ncbi_adapters.fa
+        ReadsF=$(ls $StrainPath/F/*.fastq*)
+        ReadsR=$(ls $StrainPath/R/*.fastq*)
+        echo $ReadsF
+        echo $ReadsR
+        qsub $ProgDir/rna_qc_fastq-mcf.sh $ReadsF $ReadsR $IlluminaAdapters DNA
+    done
 
