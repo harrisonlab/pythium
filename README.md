@@ -77,34 +77,84 @@ Visualise by navigating to the file in finder (after cluster_mount) and opening 
 
 (We have visualised (open html file), don't know what it means.)
 
-NEED TO DO BELOW NEXT TIME : HAVE NOT ALTERED THIS YET.
+
 
 Trimming was performed on data to trim adapters from sequences and remove poor quality data.
 This was done with fastq-mcf
 
+Trimming was first performed on all strains that had a single run of data:
 
 ```bash
 for Strain in $(ls -d raw_dna/paired/*/* | grep -e 'P107' -e 'P67'); do
 echo $Strain
 IluminaAdapters=/home/halesk/git_repos/tools/seq_tools/ncbi_adapters.fa
 ProgDir=/home/halesk/git_repos/tools/seq_tools/rna_qc
-ReadsF=$(ls $StrainPath/F/*.fastq*)
-        ReadsR=$(ls $StrainPath/R/*.fastq*)
-        echo $ReadsF
-        echo $ReadsR
+ReadsF=$(ls $Strain/F/*.fastq*)
+ReadsR=$(ls $Strain/R/*.fastq*)
+echo $ReadsF
+echo $ReadsR
+qsub $ProgDir/rna_qc_fastq-mcf.sh $ReadsF $ReadsR $IluminaAdapters DNA
+done
+```
+
+
+Trimming was then performed on strains that had 2 runs of data:
+
+```bash
+for Strain in $(ls -d raw_dna/paired/P.violae/*); do
+echo $Strain
+IluminaAdapters=/home/halesk/git_repos/tools/seq_tools/ncbi_adapters.fa
+ProgDir=/home/halesk/git_repos/tools/seq_tools/rna_qc
+Read_F=$(ls $Strain/F/*.fastq.gz | grep -v 'run2')
+Read_R=$(ls $Strain/R/*.fastq.gz | grep -v 'run2')
+echo $Read_F
+echo $Read_R
+qsub $ProgDir/rna_qc_fastq-mcf.sh $Read_F $Read_R $IluminaAdapters DNA
+Read_F=$(ls $Strain/F/*.fastq.gz | grep 'run2')
+Read_R=$(ls $Strain/R/*.fastq.gz | grep 'run2')
+echo $Read_F
+echo $Read_R
 qsub $ProgDir/rna_qc_fastq-mcf.sh $Read_F $Read_R $IluminaAdapters DNA
 done
 ```
 
-Trimming was first performed on all strains that had a single run of data:
+This goes into a folder in Pythium called qc_dna. The end of the file is trim.fq.gz. 
+Have 2 F and 2 R each for HL and DE and 1 F and 1 R each for Int/Sul.
 
-    for StrainPath in $(ls -d raw_dna/paired/*/* | grep -v -e 'Fus2' -e 'HB6'); do
-        ProgDir=/home/armita/git_repos/emr_repos/tools/seq_tools/rna_qc
-        IlluminaAdapters=/home/armita/git_repos/emr_repos/tools/seq_tools/ncbi_adapters.fa
-        ReadsF=$(ls $StrainPath/F/*.fastq*)
-        ReadsR=$(ls $StrainPath/R/*.fastq*)
-        echo $ReadsF
-        echo $ReadsR
-        qsub $ProgDir/rna_qc_fastq-mcf.sh $ReadsF $ReadsR $IlluminaAdapters DNA
-    done
 
+Data quality was visualised once again following trimming:
+
+```bash
+for RawData in $(ls qc_dna/paired/P.*/*/*/*.fq.gz); do
+echo $RawData;
+ProgDir=/home/halesk/git_repos/tools/seq_tools/dna_qc;
+qsub $ProgDir/run_fastqc.sh $RawData;
+done
+```
+
+No output directory is set so it will go into the same folder it came out of (A new directory has been created in
+/qc_dna/paired/P.violae/HL/R (for example) called  HL-Pviolae_S1_L001_R2_001_fastqc which contains the fastqc files)
+
+Visualise by navigating to the file in finder (after cluster_mount) and opening the file from finder (/groups, harrisonlab, project files etc.)
+
+(We have visualised (open html file), don't know what it means.)
+
+Done down to here
+
+
+kmer counting was performed using kmc.
+This allowed estimation of sequencing depth and total genome size:
+
+```bash
+for StrainPath in $(ls -d qc_dna/paired/P.*/*); do
+echo $StrainPath
+Trim_F=$(ls $StrainPath/F/*.fq.gz)
+Trim_R=$(ls $StrainPath/R/*.fq.gz)
+ProgDir=/home/halesk/git_repos/tools/seq_tools/dna_qc
+qsub $ProgDir/kmc_kmer_counting.sh $Trim_F $Trim_R
+done
+```
+
+** Estimated Genome Size is: 48490129
+
+** Esimated Coverage is: 42
