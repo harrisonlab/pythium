@@ -139,7 +139,7 @@ Visualise by navigating to the file in finder (after cluster_mount) and opening 
 
 (We have visualised (open html file), don't know what it means.)
 
-Done down to here
+
 
 
 kmer counting was performed using kmc.
@@ -154,7 +154,62 @@ ProgDir=/home/halesk/git_repos/tools/seq_tools/dna_qc
 qsub $ProgDir/kmc_kmer_counting.sh $Trim_F $Trim_R
 done
 ```
+done the script above, take estimated genome size etc from true txt file
 
-** Estimated Genome Size is: 48490129
 
-** Esimated Coverage is: 42
+** Estimated Genome Size is: ?
+
+** Esimated Coverage is: ?
+
+
+#Assembly
+Assembly was performed using: Spades
+
+First submitted the isolates with 2 runs for assembly
+
+```bash
+
+for StrainPath in $(ls -d qc_dna/paired/P.violae/*); do
+ProgDir=~/git_repos/tools/seq_tools/assemblers/spades/multiple_libraries;
+Strain=$(echo $StrainPath | rev | cut -f1 -d '/' | rev);
+Organism=$(echo $StrainPath | rev | cut -f2 -d '/' | rev);
+F1_Read=$(ls $StrainPath/F/*.fq.gz | grep -v 'run2');
+R1_Read=$(ls $StrainPath/R/*.fq.gz | grep -v 'run2');
+F2_Read=$(ls $StrainPath/F/*.fq.gz | grep 'run2');
+R2_Read=$(ls $StrainPath/R/*.fq.gz | grep 'run2');
+OutDir=assembly/spades/$Organism/$Strain;
+echo $F1_Read;
+echo $R1_Read;
+echo $F2_Read;
+echo $R2_Read;
+qsub $ProgDir/subSpades_2lib.sh $F1_Read $R1_Read $F2_Read $R2_Read $OutDir correct 10
+done
+```
+
+Then submitted isolates with single runs for assembly:
+
+for StrainPath in $(ls -d qc_dna/paired/*/* | grep -e 'P107' -e 'P67'); do
+ProgDir=/home/halesk/git_repos/tools/seq_tools/assemblers/spades;
+Strain=$(echo $StrainPath | rev | cut -f1 -d '/' | rev);
+Organism=$(echo $StrainPath | rev | cut -f2 -d '/' | rev);
+F_Read=$(ls $StrainPath/F/*.fq.gz);
+R_Read=$(ls $StrainPath/R/*.fq.gz);
+OutDir=assembly/spades/$Organism/$Strain;
+echo $F_Read;
+echo $R_Read;
+qsub $ProgDir/submit_SPAdes.sh $F_Read $R_Read $OutDir correct 10
+done
+
+Then I submitted P.intermedium with the submit_dipSPAdes.sh
+
+for StrainPath in $(ls -d qc_dna/paired/*/* | grep -e 'P107'); do
+ProgDir=/home/halesk/git_repos/tools/seq_tools/assemblers/spades;
+Strain=$(echo $StrainPath | rev | cut -f1 -d '/' | rev);
+Organism=$(echo $StrainPath | rev | cut -f2 -d '/' | rev);
+F_Read=$(ls $StrainPath/F/*.fq.gz);
+R_Read=$(ls $StrainPath/R/*.fq.gz);
+OutDir=assembly/spades/$Organism/$Strain;
+echo $F_Read;
+echo $R_Read;
+qsub $ProgDir/submit_dipSPAdes.sh $F_Read $R_Read $OutDir correct 10
+done
