@@ -213,3 +213,48 @@ echo $F_Read;
 echo $R_Read;
 qsub $ProgDir/submit_dipSPAdes.sh $F_Read $R_Read $OutDir correct 10
 done
+
+
+Assemblies run
+
+I can't see 2 intermedium assembiles, did one overwrite the other one?
+
+There is a folder called assembly/spades/P.*/*/filtered_contigs and in there is a fasta file.
+
+
+To generate assembly stats need to run remove contaminants and then quast
+
+
+#Remove contaminants
+
+```bash
+for OutDir in $(ls -d assembly/spades/P.*/*/filtered_contigs); do
+echo "$OutDir"
+ProgDir=/home/halesk/git_repos/tools/seq_tools/assemblers/assembly_qc/remove_contaminants
+AssFiltered=$OutDir/contigs_min_500bp.fasta
+AssRenamed=$OutDir/contigs_min_500bp_renamed.fasta
+ls $AssFiltered
+printf '.\t.\t.\t.\n' > editfile.tab
+$ProgDir/remove_contaminants.py --inp $AssFiltered --out $AssRenamed --coord_file editfile.tab
+rm editfile.tab
+done
+```
+
+Ran the script above, in the same filtered contigs directory as above have another fasta file called renamed.
+
+Then run Quast, this generates assembly stats
+
+#Quast
+
+```bash
+ProgDir=/home/halesk/git_repos/tools/seq_tools/assemblers/assembly_qc/quast
+for Assembly in $(ls assembly/spades/*/*/filtered_contigs/*_500bp_renamed.fasta); do
+Strain=$(echo $Assembly | rev | cut -d '/' -f3 | rev)
+Organism=$(echo $Assembly | rev | cut -d '/' -f4 | rev)
+OutDir=assembly/spades/$Organism/$Strain/filtered_contigs
+qsub $ProgDir/sub_quast.sh $Assembly $OutDir
+done
+```
+SUBMITTED ABOVE AND IT IS RUNNING
+These report stats can be found in:
+less assembly/spades/P.violae/DE/filtered_contigs
