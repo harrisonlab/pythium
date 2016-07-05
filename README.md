@@ -255,6 +255,68 @@ OutDir=assembly/spades/$Organism/$Strain/filtered_contigs
 qsub $ProgDir/sub_quast.sh $Assembly $OutDir
 done
 ```
-SUBMITTED ABOVE AND IT IS RUNNING
 These report stats can be found in:
-less assembly/spades/P.violae/DE/filtered_contigs
+less assembly/spades/P.violae/DE/filtered_contigs/report.txt
+
+
+Didn't have the normal assembly for intermedium, the dipspades most likely wrote over it.
+
+So re-ran with the script below:
+
+for StrainPath in $(ls -d qc_dna/paired/*/* | grep -e 'P107'); do
+ProgDir=/home/halesk/git_repos/tools/seq_tools/assemblers/spades;
+Strain=$(echo $StrainPath | rev | cut -f1 -d '/' | rev);
+Organism=$(echo $StrainPath | rev | cut -f2 -d '/' | rev);
+F_Read=$(ls $StrainPath/F/*.fq.gz);
+R_Read=$(ls $StrainPath/R/*.fq.gz);
+OutDir=assembly/spades/$Organism/$Strain;
+echo $F_Read;
+echo $R_Read;
+qsub $ProgDir/submit_SPAdes.sh $F_Read $R_Read $OutDir correct 10
+done
+
+Then re-ran remove contaminants:
+
+```bash
+for OutDir in $(ls -d assembly/spades/P.intermedium/*/filtered_contigs); do
+echo "$OutDir"
+ProgDir=/home/halesk/git_repos/tools/seq_tools/assemblers/assembly_qc/remove_contaminants
+AssFiltered=$OutDir/contigs_min_500bp.fasta
+AssRenamed=$OutDir/contigs_min_500bp_renamed.fasta
+ls $AssFiltered
+printf '.\t.\t.\t.\n' > editfile.tab
+$ProgDir/remove_contaminants.py --inp $AssFiltered --out $AssRenamed --coord_file editfile.tab
+rm editfile.tab
+done
+```
+
+Then re-ran quast:
+
+ProgDir=/home/halesk/git_repos/tools/seq_tools/assemblers/assembly_qc/quast
+for Assembly in $(ls assembly/spades/P.intermedium/*/filtered_contigs/*_500bp_renamed.fasta); do
+Strain=$(echo $Assembly | rev | cut -d '/' -f3 | rev)
+Organism=$(echo $Assembly | rev | cut -d '/' -f4 | rev)
+OutDir=assembly/spades/$Organism/$Strain/filtered_contigs
+qsub $ProgDir/sub_quast.sh $Assembly $OutDir
+done
+
+
+Then I need to compare the diploid and non diploid genome stats: the numbers are the same, need to re-run dip one again
+
+For now carry on with rest: so running repeatmasking for all of then in assembly/spades which includes nondip intermedium assembly
+Once I've re-run the diploid assembly for intermedium then can run quast etc for that.
+
+#Repeat Masking
+Repeat masking was performed and used the following programs: Repeatmasker Repeatmodeler
+
+```bash
+ProgDir=/home/halesk/git_repos/tools/seq_tools/repeat_masking
+for BestAss in $(ls assembly/spades/*/*/filtered_contigs/*_500bp_renamed.fasta); do
+echo $BestAss
+qsub $ProgDir/rep_modeling.sh $BestAss
+qsub $ProgDir/transposonPSI.sh $BestAss
+done
+```
+
+Take around 24 hours??
+
